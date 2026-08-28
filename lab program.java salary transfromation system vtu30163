@@ -1,0 +1,62 @@
+import java.util.Scanner;
+
+class Employee {
+    String name;
+    double basicSalary;
+
+    Employee(String name, double basicSalary) {
+        this.name = name;
+        this.basicSalary = basicSalary;
+    }
+
+    double calculateSalary() {
+        double hra = basicSalary * 0.20;  // 20% HRA
+        double da = basicSalary * 0.10;   // 10% DA
+        double pf = basicSalary * 0.12;   // 12% PF
+
+        return basicSalary + hra + da - pf;
+    }
+
+    void display() {
+        double hra = basicSalary * 0.20;
+        double da = basicSalary * 0.10;
+        double pf = basicSalary * 0.12;
+        double finalSalary = calculateSalary();
+
+        System.out.println("\n--- Salary Details ---");
+        System.out.println("Employee Name : " + name);
+        System.out.printf("Basic Salary  : %.2f%n", basicSalary);
+        System.out.printf("HRA (20%%)     : %.2f%n", hra);
+        System.out.printf("DA (10%%)      : %.2f%n", da);
+        System.out.printf("PF (12%%)      : %.2f%n", pf);
+        System.out.printf("Final Salary  : %.2f%n", finalSalary);
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+
+        System.out.print("Enter employee name: ");
+        String name = sc.nextLine();
+
+        System.out.print("Enter basic salary: ");
+        double basicSalary = sc.nextDouble();
+
+        Employee employee = new Employee(name, basicSalary);
+        employee.display();
+
+        sc.close();
+    }
+}
+output:
+Enter employee name: Akhil
+Enter basic salary: 30000
+Sample Output
+--- Salary Details ---
+Employee Name : Akhil
+Basic Salary  : 30000.00
+HRA (20%)     : 6000.00
+DA (10%)      : 3000.00
+PF (12%)      : 3600.00
+Final Salary  : 35400.00
