@@ -1,0 +1,114 @@
+import java.util.*;
+
+class StreamAnalytics {
+
+    private int count = 0;
+    private long sum = 0;
+    private int min = Integer.MAX_VALUE;
+    private int max = Integer.MIN_VALUE;
+    private int thresholdCount = 0;
+
+    private final int threshold;
+
+    StreamAnalytics(int threshold) {
+        this.threshold = threshold;
+    }
+
+    // Process each incoming data value
+    public void process(int value) {
+        count++;
+        sum += value;
+
+        min = Math.min(min, value);
+        max = Math.max(max, value);
+
+        if (value > threshold) {
+            thresholdCount++;
+        }
+
+        display(value);
+    }
+
+    private void display(int value) {
+        double average = (double) sum / count;
+
+        System.out.println("\nNew Data: " + value);
+        System.out.println("Count: " + count);
+        System.out.println("Sum: " + sum);
+        System.out.printf("Average: %.2f%n", average);
+        System.out.println("Minimum: " + min);
+        System.out.println("Maximum: " + max);
+        System.out.println("Values Above " + threshold + ": " + thresholdCount);
+    }
+}
+
+public class Main {
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+
+        System.out.print("Enter threshold: ");
+        int threshold = sc.nextInt();
+
+        System.out.print("Enter number of data values: ");
+        int n = sc.nextInt();
+
+        StreamAnalytics engine = new StreamAnalytics(threshold);
+
+        System.out.println("\nEnter stream values:");
+
+        for (int i = 0; i < n; i++) {
+            int value = sc.nextInt();
+
+            // Process data immediately as it arrives
+            engine.process(value);
+        }
+
+        sc.close();
+    }
+}
+output:
+Sample Input
+50
+5
+20 80 40 100 60
+Sample Output
+New Data: 20
+Count: 1
+Sum: 20
+Average: 20.00
+Minimum: 20
+Maximum: 20
+Values Above 50: 0
+
+New Data: 80
+Count: 2
+Sum: 100
+Average: 50.00
+Minimum: 20
+Maximum: 80
+Values Above 50: 1
+
+New Data: 40
+Count: 3
+Sum: 140
+Average: 46.67
+Minimum: 20
+Maximum: 80
+Values Above 50: 1
+
+New Data: 100
+Count: 4
+Sum: 240
+Average: 60.00
+Minimum: 20
+Maximum: 100
+Values Above 50: 2
+
+New Data: 60
+Count: 5
+Sum: 300
+Average: 60.00
+Minimum: 20
+Maximum: 100
+Values Above 50: 3
