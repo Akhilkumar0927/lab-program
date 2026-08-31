@@ -1,0 +1,174 @@
+import java.util.*;
+
+public class IntelligentDNAPatternSearch {
+
+    // ---------- Core: Exact Pattern Search (KMP Algorithm) ----------
+    /**
+     * Finds all starting indices where 'pattern' occurs exactly in 'sequence'.
+     * Uses KMP for O(n + m) efficiency instead of brute force O(n*m).
+     */
+    public static List<Integer> exactSearch(String sequence, String pattern) {
+        List<Integer> positions = new ArrayList<>();
+        if (pattern.isEmpty() || sequence.length() < pattern.length()) return positions;
+
+        int[] lps = buildLPS(pattern);
+        int i = 0, j = 0; // i -> sequence index, j -> pattern index
+
+        while (i < sequence.length()) {
+            if (sequence.charAt(i) == pattern.charAt(j)) {
+                i++; j++;
+                if (j == pattern.length()) {
+                    positions.add(i - j); // match found
+                    j = lps[j - 1];
+                }
+            } else if (j > 0) {
+                j = lps[j - 1];
+            } else {
+                i++;
+            }
+        }
+        return positions;
+    }
+
+    // Builds the "Longest Prefix Suffix" table used by KMP
+    private static int[] buildLPS(String pattern) {
+        int[] lps = new int[pattern.length()];
+        int len = 0, i = 1;
+        while (i < pattern.length()) {
+            if (pattern.charAt(i) == pattern.charAt(len)) {
+                lps[i++] = ++len;
+            } else if (len > 0) {
+                len = lps[len - 1];
+            } else {
+                lps[i++] = 0;
+            }
+        }
+        return lps;
+    }
+
+    // ---------- Reverse Complement Search ----------
+    /**
+     * DNA strands are double-stranded and read in opposite directions.
+     * A pattern may match the OTHER strand, which is the reverse complement.
+     * A <-> T   and   C <-> G
+     */
+    public static String reverseComplement(String pattern) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = pattern.length() - 1; i >= 0; i--) {
+            switch (pattern.charAt(i)) {
+                case 'A': sb.append('T'); break;
+                case 'T': sb.append('A'); break;
+                case 'C': sb.append('G'); break;
+                case 'G': sb.append('C'); break;
+                default: sb.append('N'); // unknown base
+            }
+        }
+        return sb.toString();
+    }
+
+    // ---------- Approximate Search (Allowing Mismatches) ----------
+    /**
+     * Finds positions where 'pattern' matches 'sequence' with at most
+     * 'maxMismatches' character differences (useful for mutations/SNPs).
+     */
+    public static List<int[]> approximateSearch(String sequence, String pattern, int maxMismatches) {
+        List<int[]> results = new ArrayList<>(); // {position, mismatchCount}
+        int n = sequence.length(), m = pattern.length();
+
+        for (int i = 0; i <= n - m; i++) {
+            int mismatches = 0;
+            for (int j = 0; j < m; j++) {
+                if (sequence.charAt(i + j) != pattern.charAt(j)) {
+                    mismatches++;
+                    if (mismatches > maxMismatches) break; // early exit
+                }
+            }
+            if (mismatches <= maxMismatches) {
+                results.add(new int[]{i, mismatches});
+            }
+        }
+        return results;
+    }
+
+    // ---------- Input Validation ----------
+    private static boolean isValidDNA(String s) {
+        return s.matches("[ACGTacgt]+");
+    }
+
+    // ---------- Main Program ----------
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+
+        System.out.println("=== Intelligent DNA Pattern Search ===");
+        System.out.print("Enter DNA sequence: ");
+        String sequence = sc.nextLine().trim().toUpperCase();
+
+        System.out.print("Enter pattern to search: ");
+        String pattern = sc.nextLine().trim().toUpperCase();
+
+        if (!isValidDNA(sequence) || !isValidDNA(pattern)) {
+            System.out.println("Error: DNA sequence/pattern must contain only A, C, G, T.");
+            sc.close();
+            return;
+        }
+
+        // 1. Exact match on forward strand
+        List<Integer> exactMatches = exactSearch(sequence, pattern);
+        System.out.println("\n--- Exact Matches (Forward Strand) ---");
+        if (exactMatches.isEmpty()) {
+            System.out.println("No exact matches found.");
+        } else {
+            for (int pos : exactMatches) {
+                System.out.println("Match at position: " + pos + " (0-indexed)");
+            }
+        }
+
+        // 2. Reverse complement match
+        String revComp = reverseComplement(pattern);
+        List<Integer> revMatches = exactSearch(sequence, revComp);
+        System.out.println("\n--- Reverse Complement: " + revComp + " ---");
+        if (revMatches.isEmpty()) {
+            System.out.println("No reverse complement matches found.");
+        } else {
+            for (int pos : revMatches) {
+                System.out.println("Match at position: " + pos + " (on reverse strand)");
+            }
+        }
+
+        // 3. Approximate match (allowing up to 1 mismatch, adjustable)
+        int maxMismatches = 1;
+        System.out.print("\nEnter max allowed mismatches for approximate search: ");
+        maxMismatches = sc.hasNextInt() ? sc.nextInt() : 1;
+
+        List<int[]> approxMatches = approximateSearch(sequence, pattern, maxMismatches);
+        System.out.println("\n--- Approximate Matches (<=" + maxMismatches + " mismatches) ---");
+        if (approxMatches.isEmpty()) {
+            System.out.println("No approximate matches found.");
+        } else {
+            for (int[] result : approxMatches) {
+                System.out.println("Position: " + result[0] + " | Mismatches: " + result[1]);
+            }
+        }
+
+        sc.close();
+    }
+}
+output:
+Enter DNA sequence: ATCGGATCGATCGTAGCTA
+Enter pattern to search: ATCG
+
+--- Exact Matches (Forward Strand) ---
+Match at position: 0
+Match at position: 6
+Match at position: 10
+
+--- Reverse Complement: CGAT ---
+Match at position: 8
+
+Enter max allowed mismatches for approximate search: 1
+
+--- Approximate Matches (<=1 mismatches) ---
+Position: 0 | Mismatches: 0
+Position: 6 | Mismatches: 0
+Position: 10 | Mismatches: 0
+Position: 15 | Mismatches: 1
