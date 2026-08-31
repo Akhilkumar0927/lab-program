@@ -1,0 +1,273 @@
+import java.util.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
+// ---------- Custom Exceptions ----------
+class InsufficientFundsException extends Exception {
+    public InsufficientFundsException(String message) {
+        super(message);
+    }
+}
+
+class AccountNotFoundException extends Exception {
+    public AccountNotFoundException(String message) {
+        super(message);
+    }
+}
+
+class InvalidAmountException extends Exception {
+    public InvalidAmountException(String message) {
+        super(message);
+    }
+}
+
+// ---------- Transaction Record ----------
+class Transaction {
+    private static int counter = 1000;
+    private final int transactionId;
+    private final String type;       // DEPOSIT, WITHDRAW, TRANSFER_IN, TRANSFER_OUT
+    private final double amount;
+    private final double balanceAfter;
+    private final String timestamp;
+    private final String description;
+
+    public Transaction(String type, double amount, double balanceAfter, String description) {
+        this.transactionId = ++counter;
+        this.type = type;
+        this.amount = amount;
+        this.balanceAfter = balanceAfter;
+        this.description = description;
+        this.timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    }
+
+    @Override
+    public String toString() {
+        return String.format("[%d] %-12s | Amount: %-10.2f | Balance After: %-10.2f | %s | %s",
+                transactionId, type, amount, balanceAfter, timestamp, description);
+    }
+}
+
+// ---------- Account ----------
+class Account {
+    private final String accountNumber;
+    private final String ownerName;
+    private double balance;
+    private final String accountType; // SAVINGS or CURRENT
+    private final List<Transaction> history = new ArrayList<>();
+
+    public Account(String accountNumber, String ownerName, double initialDeposit, String accountType) {
+        this.accountNumber = accountNumber;
+        this.ownerName = ownerName;
+        this.balance = initialDeposit;
+        this.accountType = accountType;
+        if (initialDeposit > 0) {
+            history.add(new Transaction("DEPOSIT", initialDeposit, balance, "Initial deposit"));
+        }
+    }
+
+    public void deposit(double amount) throws InvalidAmountException {
+        if (amount <= 0) throw new InvalidAmountException("Deposit amount must be positive.");
+        balance += amount;
+        history.add(new Transaction("DEPOSIT", amount, balance, "Cash deposit"));
+    }
+
+    public void withdraw(double amount) throws InvalidAmountException, InsufficientFundsException {
+        if (amount <= 0) throw new InvalidAmountException("Withdrawal amount must be positive.");
+        if (amount > balance) throw new InsufficientFundsException(
+                "Insufficient balance. Available: " + balance + ", Requested: " + amount);
+        balance -= amount;
+        history.add(new Transaction("WITHDRAW", amount, balance, "Cash withdrawal"));
+    }
+
+    // Used internally by the bank for transfers (keeps symmetric records)
+    void debitForTransfer(double amount, String toAccount) throws InsufficientFundsException {
+        if (amount > balance) throw new InsufficientFundsException(
+                "Insufficient balance for transfer. Available: " + balance);
+        balance -= amount;
+        history.add(new Transaction("TRANSFER_OUT", amount, balance, "To " + toAccount));
+    }
+
+    void creditFromTransfer(double amount, String fromAccount) {
+        balance += amount;
+        history.add(new Transaction("TRANSFER_IN", amount, balance, "From " + fromAccount));
+    }
+
+    public void printStatement() {
+        System.out.println("\n===== Statement for " + accountNumber + " (" + ownerName + ") =====");
+        System.out.println("Account Type: " + accountType + " | Current Balance: " + balance);
+        System.out.println("---------------------------------------------------------------");
+        if (history.isEmpty()) {
+            System.out.println("No transactions yet.");
+        } else {
+            for (Transaction t : history) System.out.println(t);
+        }
+        System.out.println("=================================================================\n");
+    }
+
+    // Getters
+    public String getAccountNumber() { return accountNumber; }
+    public String getOwnerName() { return ownerName; }
+    public double getBalance() { return balance; }
+    public String getAccountType() { return accountType; }
+}
+
+// ---------- Bank (manages all accounts) ----------
+class Bank {
+    private final Map<String, Account> accounts = new HashMap<>();
+    private int accountCounter = 1001;
+
+    public Account openAccount(String ownerName, double initialDeposit, String accountType) {
+        String accNum = "ACC" + (accountCounter++);
+        Account acc = new Account(accNum, ownerName, initialDeposit, accountType);
+        accounts.put(accNum, acc);
+        System.out.println("Account created successfully! Account Number: " + accNum);
+        return acc;
+    }
+
+    public Account getAccount(String accNum) throws AccountNotFoundException {
+        Account acc = accounts.get(accNum);
+        if (acc == null) throw new AccountNotFoundException("No account found with number: " + accNum);
+        return acc;
+    }
+
+    public void deposit(String accNum, double amount) throws AccountNotFoundException, InvalidAmountException {
+        getAccount(accNum).deposit(amount);
+        System.out.println("Deposit successful. New balance: " + getAccount(accNum).getBalance());
+    }
+
+    public void withdraw(String accNum, double amount)
+            throws AccountNotFoundException, InvalidAmountException, InsufficientFundsException {
+        getAccount(accNum).withdraw(amount);
+        System.out.println("Withdrawal successful. New balance: " + getAccount(accNum).getBalance());
+    }
+
+    public void transfer(String fromAccNum, String toAccNum, double amount)
+            throws AccountNotFoundException, InsufficientFundsException, InvalidAmountException {
+        if (amount <= 0) throw new InvalidAmountException("Transfer amount must be positive.");
+        Account from = getAccount(fromAccNum);
+        Account to = getAccount(toAccNum);
+
+        from.debitForTransfer(amount, toAccNum);
+        to.creditFromTransfer(amount, fromAccNum);
+        System.out.println("Transfer of " + amount + " from " + fromAccNum + " to " + toAccNum + " successful.");
+    }
+
+    public void printAllAccounts() {
+        System.out.println("\n--- All Bank Accounts ---");
+        for (Account acc : accounts.values()) {
+            System.out.printf("%-10s | %-15s | %-10s | Balance: %.2f%n",
+                    acc.getAccountNumber(), acc.getOwnerName(), acc.getAccountType(), acc.getBalance());
+        }
+    }
+}
+
+// ---------- Main Program (Console Menu) ----------
+public class BankingTransactionSystem {
+    public static void main(String[] args) {
+        Bank bank = new Bank();
+        Scanner sc = new Scanner(System.in);
+        boolean running = true;
+
+        System.out.println("=== Welcome to the Banking Transaction System ===");
+
+        while (running) {
+            System.out.println("\n1. Open Account");
+            System.out.println("2. Deposit");
+            System.out.println("3. Withdraw");
+            System.out.println("4. Transfer");
+            System.out.println("5. View Statement");
+            System.out.println("6. View All Accounts");
+            System.out.println("7. Exit");
+            System.out.print("Choose an option: ");
+
+            int choice;
+            try {
+                choice = Integer.parseInt(sc.nextLine().trim());
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter a number.");
+                continue;
+            }
+
+            try {
+                switch (choice) {
+                    case 1:
+                        System.out.print("Enter owner name: ");
+                        String name = sc.nextLine();
+                        System.out.print("Enter initial deposit: ");
+                        double initial = Double.parseDouble(sc.nextLine());
+                        System.out.print("Enter account type (SAVINGS/CURRENT): ");
+                        String type = sc.nextLine().toUpperCase();
+                        bank.openAccount(name, initial, type);
+                        break;
+
+                    case 2:
+                        System.out.print("Enter account number: ");
+                        String depAcc = sc.nextLine();
+                        System.out.print("Enter deposit amount: ");
+                        double depAmt = Double.parseDouble(sc.nextLine());
+                        bank.deposit(depAcc, depAmt);
+                        break;
+
+                    case 3:
+                        System.out.print("Enter account number: ");
+                        String wAcc = sc.nextLine();
+                        System.out.print("Enter withdrawal amount: ");
+                        double wAmt = Double.parseDouble(sc.nextLine());
+                        bank.withdraw(wAcc, wAmt);
+                        break;
+
+                    case 4:
+                        System.out.print("Enter FROM account number: ");
+                        String fromAcc = sc.nextLine();
+                        System.out.print("Enter TO account number: ");
+                        String toAcc = sc.nextLine();
+                        System.out.print("Enter transfer amount: ");
+                        double tAmt = Double.parseDouble(sc.nextLine());
+                        bank.transfer(fromAcc, toAcc, tAmt);
+                        break;
+
+                    case 5:
+                        System.out.print("Enter account number: ");
+                        String stAcc = sc.nextLine();
+                        bank.getAccount(stAcc).printStatement();
+                        break;
+
+                    case 6:
+                        bank.printAllAccounts();
+                        break;
+
+                    case 7:
+                        running = false;
+                        System.out.println("Thank you for using the Banking Transaction System!");
+                        break;
+
+                    default:
+                        System.out.println("Invalid option. Try again.");
+                }
+            } catch (AccountNotFoundException | InsufficientFundsException | InvalidAmountException e) {
+                System.out.println("Error: " + e.getMessage());
+            } catch (NumberFormatException e) {
+                System.out.println("Error: Please enter a valid number.");
+            }
+        }
+
+        sc.close();
+    }
+}
+output:
+=== Welcome to the Banking Transaction System ===
+
+1. Open Account
+2. Deposit
+...
+Choose an option: 1
+Enter owner name: Arjun
+Enter initial deposit: 5000
+Enter account type (SAVINGS/CURRENT): SAVINGS
+Account created successfully! Account Number: ACC1001
+
+Choose an option: 4
+Enter FROM account number: ACC1001
+Enter TO account number: ACC1002
+Enter transfer amount: 1000
+Transfer of 1000.0 from ACC1001 to ACC1002 successful.
