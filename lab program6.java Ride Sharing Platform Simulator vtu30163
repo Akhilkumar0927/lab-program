@@ -1,0 +1,457 @@
+import java.util.*;
+
+class User {
+    int id;
+    String name;
+
+    User(int id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+}
+
+class Driver {
+    int id;
+    String name;
+    boolean available;
+    double x, y;
+
+    Driver(int id, String name, double x, double y) {
+        this.id = id;
+        this.name = name;
+        this.x = x;
+        this.y = y;
+        this.available = true;
+    }
+}
+
+class Ride {
+    int rideId;
+    User user;
+    Driver driver;
+    double pickupX, pickupY;
+    double destinationX, destinationY;
+    double distance;
+    double fare;
+    String status;
+
+    Ride(int rideId, User user, double pickupX, double pickupY,
+         double destinationX, double destinationY) {
+
+        this.rideId = rideId;
+        this.user = user;
+        this.pickupX = pickupX;
+        this.pickupY = pickupY;
+        this.destinationX = destinationX;
+        this.destinationY = destinationY;
+        this.status = "REQUESTED";
+    }
+}
+
+public class RideSharingPlatform {
+
+    static Scanner sc = new Scanner(System.in);
+
+    static ArrayList<User> users = new ArrayList<>();
+    static ArrayList<Driver> drivers = new ArrayList<>();
+    static ArrayList<Ride> rides = new ArrayList<>();
+
+    static int userId = 1;
+    static int driverId = 1;
+    static int rideId = 1;
+
+    // Register User
+    static void registerUser() {
+        System.out.print("Enter user name: ");
+        String name = sc.nextLine();
+
+        User user = new User(userId++, name);
+        users.add(user);
+
+        System.out.println("User registered successfully!");
+        System.out.println("User ID: " + user.id);
+    }
+
+    // Register Driver
+    static void registerDriver() {
+        System.out.print("Enter driver name: ");
+        String name = sc.nextLine();
+
+        System.out.print("Enter driver's X location: ");
+        double x = sc.nextDouble();
+
+        System.out.print("Enter driver's Y location: ");
+        double y = sc.nextDouble();
+        sc.nextLine();
+
+        Driver driver = new Driver(driverId++, name, x, y);
+        drivers.add(driver);
+
+        System.out.println("Driver registered successfully!");
+        System.out.println("Driver ID: " + driver.id);
+    }
+
+    // Find User
+    static User findUser(int id) {
+        for (User u : users) {
+            if (u.id == id)
+                return u;
+        }
+        return null;
+    }
+
+    // Calculate distance
+    static double calculateDistance(double x1, double y1,
+                                    double x2, double y2) {
+        return Math.sqrt(
+                Math.pow(x2 - x1, 2) +
+                Math.pow(y2 - y1, 2)
+        );
+    }
+
+    // Request Ride
+    static void requestRide() {
+
+        if (users.isEmpty()) {
+            System.out.println("No users registered.");
+            return;
+        }
+
+        if (drivers.isEmpty()) {
+            System.out.println("No drivers registered.");
+            return;
+        }
+
+        System.out.print("Enter User ID: ");
+        int uid = sc.nextInt();
+
+        User user = findUser(uid);
+
+        if (user == null) {
+            System.out.println("User not found.");
+            return;
+        }
+
+        System.out.print("Enter pickup X: ");
+        double pickupX = sc.nextDouble();
+
+        System.out.print("Enter pickup Y: ");
+        double pickupY = sc.nextDouble();
+
+        System.out.print("Enter destination X: ");
+        double destinationX = sc.nextDouble();
+
+        System.out.print("Enter destination Y: ");
+        double destinationY = sc.nextDouble();
+
+        // Find nearest available driver
+        Driver nearestDriver = null;
+        double minimumDistance = Double.MAX_VALUE;
+
+        for (Driver d : drivers) {
+
+            if (d.available) {
+
+                double distance = calculateDistance(
+                        pickupX, pickupY, d.x, d.y
+                );
+
+                if (distance < minimumDistance) {
+                    minimumDistance = distance;
+                    nearestDriver = d;
+                }
+            }
+        }
+
+        if (nearestDriver == null) {
+            System.out.println("No drivers are currently available.");
+            return;
+        }
+
+        Ride ride = new Ride(
+                rideId++,
+                user,
+                pickupX,
+                pickupY,
+                destinationX,
+                destinationY
+        );
+
+        ride.driver = nearestDriver;
+
+        // Calculate ride distance
+        ride.distance = calculateDistance(
+                pickupX,
+                pickupY,
+                destinationX,
+                destinationY
+        );
+
+        // Fare calculation
+        double baseFare = 50;
+        double perKm = 15;
+
+        ride.fare = baseFare + (ride.distance * perKm);
+
+        ride.status = "ACCEPTED";
+
+        nearestDriver.available = false;
+
+        rides.add(ride);
+
+        System.out.println("\nRide booked successfully!");
+        System.out.println("Ride ID: " + ride.rideId);
+        System.out.println("Driver: " + nearestDriver.name);
+        System.out.printf("Distance: %.2f km%n", ride.distance);
+        System.out.printf("Fare: Rs. %.2f%n", ride.fare);
+        System.out.println("Status: " + ride.status);
+    }
+
+    // Complete Ride
+    static void completeRide() {
+
+        System.out.print("Enter Ride ID: ");
+        int id = sc.nextInt();
+
+        for (Ride r : rides) {
+
+            if (r.rideId == id) {
+
+                if (r.status.equals("COMPLETED")) {
+                    System.out.println("Ride is already completed.");
+                    return;
+                }
+
+                r.status = "COMPLETED";
+
+                // Make driver available again
+                r.driver.available = true;
+
+                // Update driver location
+                r.driver.x = r.destinationX;
+                r.driver.y = r.destinationY;
+
+                System.out.println("Ride completed successfully!");
+                System.out.printf("Final Fare: Rs. %.2f%n", r.fare);
+
+                return;
+            }
+        }
+
+        System.out.println("Ride not found.");
+    }
+
+    // Display all rides
+    static void displayRides() {
+
+        if (rides.isEmpty()) {
+            System.out.println("No rides available.");
+            return;
+        }
+
+        System.out.println("\n----- Ride History -----");
+
+        for (Ride r : rides) {
+
+            System.out.println("Ride ID      : " + r.rideId);
+            System.out.println("User         : " + r.user.name);
+            System.out.println("Driver       : " + r.driver.name);
+            System.out.printf("Distance     : %.2f km%n", r.distance);
+            System.out.printf("Fare         : Rs. %.2f%n", r.fare);
+            System.out.println("Status       : " + r.status);
+            System.out.println("------------------------");
+        }
+    }
+
+    // Display drivers
+    static void displayDrivers() {
+
+        if (drivers.isEmpty()) {
+            System.out.println("No drivers registered.");
+            return;
+        }
+
+        System.out.println("\n----- Drivers -----");
+
+        for (Driver d : drivers) {
+
+            System.out.println(
+                    "ID: " + d.id +
+                    " | Name: " + d.name +
+                    " | Location: (" +
+                    d.x + ", " + d.y + ")" +
+                    " | Available: " + d.available
+            );
+        }
+    }
+
+    public static void main(String[] args) {
+
+        while (true) {
+
+            System.out.println("\n================================");
+            System.out.println("   RIDE SHARING PLATFORM");
+            System.out.println("================================");
+            System.out.println("1. Register User");
+            System.out.println("2. Register Driver");
+            System.out.println("3. Request Ride");
+            System.out.println("4. Complete Ride");
+            System.out.println("5. Display Ride History");
+            System.out.println("6. Display Drivers");
+            System.out.println("7. Exit");
+            System.out.print("Enter your choice: ");
+
+            int choice = sc.nextInt();
+            sc.nextLine();
+
+            switch (choice) {
+
+                case 1:
+                    registerUser();
+                    break;
+
+                case 2:
+                    registerDriver();
+                    break;
+
+                case 3:
+                    requestRide();
+                    break;
+
+                case 4:
+                    completeRide();
+                    break;
+
+                case 5:
+                    displayRides();
+                    break;
+
+                case 6:
+                    displayDrivers();
+                    break;
+
+                case 7:
+                    System.out.println("Thank you for using Ride Sharing Platform!");
+                    return;
+
+                default:
+                    System.out.println("Invalid choice!");
+            }
+        }
+    }
+}
+output:
+================================
+   RIDE SHARING PLATFORM
+================================
+1. Register User
+2. Register Driver
+3. Request Ride
+4. Complete Ride
+5. Display Ride History
+6. Display Drivers
+7. Exit
+Enter your choice: 1
+
+Enter user name: Akhil
+User registered successfully!
+User ID: 1
+
+
+================================
+   RIDE SHARING PLATFORM
+================================
+1. Register User
+2. Register Driver
+3. Request Ride
+4. Complete Ride
+5. Display Ride History
+6. Display Drivers
+7. Exit
+Enter your choice: 2
+
+Enter driver name: Ravi
+Enter driver's X location: 2
+Enter driver's Y location: 3
+Driver registered successfully!
+Driver ID: 1
+
+
+================================
+   RIDE SHARING PLATFORM
+================================
+1. Register User
+2. Register Driver
+3. Request Ride
+4. Complete Ride
+5. Display Ride History
+6. Display Drivers
+7. Exit
+Enter your choice: 3
+
+Enter User ID: 1
+Enter pickup X: 3
+Enter pickup Y: 4
+Enter destination X: 6
+Enter destination Y: 8
+
+Ride booked successfully!
+Ride ID: 1
+Driver: Ravi
+Distance: 5.00 km
+Fare: Rs. 125.00
+Status: ACCEPTED
+
+
+================================
+   RIDE SHARING PLATFORM
+================================
+1. Register User
+2. Register Driver
+3. Request Ride
+4. Complete Ride
+5. Display Ride History
+6. Display Drivers
+7. Exit
+Enter your choice: 4
+
+Enter Ride ID: 1
+Ride completed successfully!
+Final Fare: Rs. 125.00
+
+
+================================
+   RIDE SHARING PLATFORM
+================================
+1. Register User
+2. Register Driver
+3. Request Ride
+4. Complete Ride
+5. Display Ride History
+6. Display Drivers
+7. Exit
+Enter your choice: 5
+
+----- Ride History -----
+Ride ID      : 1
+User         : Akhil
+Driver       : Ravi
+Distance     : 5.00 km
+Fare         : Rs. 125.00
+Status       : COMPLETED
+------------------------
+
+
+================================
+   RIDE SHARING PLATFORM
+================================
+1. Register User
+2. Register Driver
+3. Request Ride
+4. Complete Ride
+5. Display Ride History
+6. Display Drivers
+7. Exit
+Enter your choice: 7
+
+Thank you for using Ride Sharing Platform!
