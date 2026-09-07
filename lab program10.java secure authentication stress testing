@@ -1,0 +1,72 @@
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class AuthenticationStressTest {
+
+    // Simulated authentication method
+    static boolean authenticate(String username, String password) {
+        // Example authentication logic
+        return username.equals("admin") && password.equals("1234");
+    }
+
+    public static void main(String[] args) {
+
+        int numberOfRequests = 100;
+        int numberOfThreads = 10;
+
+        ExecutorService executor =
+                Executors.newFixedThreadPool(numberOfThreads);
+
+        long startTime = System.currentTimeMillis();
+
+        for (int i = 1; i <= numberOfRequests; i++) {
+
+            final int requestId = i;
+
+            executor.submit(() -> {
+                String username = "admin";
+                String password = "1234";
+
+                long start = System.currentTimeMillis();
+
+                boolean result = authenticate(username, password);
+
+                long end = System.currentTimeMillis();
+
+                System.out.println(
+                    "Request " + requestId +
+                    " | Result: " + (result ? "SUCCESS" : "FAILED") +
+                    " | Time: " + (end - start) + " ms"
+                );
+            });
+        }
+
+        executor.shutdown();
+
+        while (!executor.isTerminated()) {
+            // Wait for all requests to finish
+        }
+
+        long endTime = System.currentTimeMillis();
+
+        System.out.println("\nStress Test Completed");
+        System.out.println("Total Requests: " + numberOfRequests);
+        System.out.println("Total Time: " +
+                (endTime - startTime) + " ms");
+    }
+}
+output:
+=== Authentication Stress Test ===
+Attempt 1: Login Failed
+Attempt 2: Login Failed
+Attempt 3: Login Failed
+Account locked: student
+Attempt 4: Login Failed
+Account locked: student
+Attempt 5: Login Failed
+Account locked: student
+Attempt 6: Login Failed
+
+Trying correct password...
+Account locked: student
+Login Failed
