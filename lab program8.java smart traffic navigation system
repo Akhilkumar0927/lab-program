@@ -1,0 +1,69 @@
+import java.util.*;
+
+class Route {
+    String name;
+    int distance;
+    int traffic;
+
+    Route(String name, int distance, int traffic) {
+        this.name = name;
+        this.distance = distance;
+        this.traffic = traffic;
+    }
+
+    int calculateTime() {
+        // Higher traffic = more travel time
+        return distance + traffic * 5;
+    }
+}
+
+public class SmartTrafficNavigation {
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        System.out.print("Enter number of routes: ");
+        int n = sc.nextInt();
+
+        Route[] routes = new Route[n];
+
+        for (int i = 0; i < n; i++) {
+
+            System.out.println("\nRoute " + (i + 1));
+
+            System.out.print("Enter route name: ");
+            String name = sc.next();
+
+            System.out.print("Enter distance (km): ");
+            int distance = sc.nextInt();
+
+            System.out.print("Enter traffic level (1-10): ");
+            int traffic = sc.nextInt();
+
+            routes[i] = new Route(name, distance, traffic);
+        }
+
+        Route bestRoute = routes[0];
+
+        for (int i = 1; i < n; i++) {
+            if (routes[i].calculateTime() < bestRoute.calculateTime()) {
+                bestRoute = routes[i];
+            }
+        }
+
+        System.out.println("\n===== SMART NAVIGATION RESULT =====");
+        System.out.println("Recommended Route : " + bestRoute.name);
+        System.out.println("Distance          : " + bestRoute.distance + " km");
+        System.out.println("Traffic Level     : " + bestRoute.traffic);
+        System.out.println("Estimated Time    : " + bestRoute.calculateTime() + " minutes");
+
+        sc.close();
+    }
+}
+output:
+===== SMART NAVIGATION RESULT =====
+Recommended Route : B
+Distance          : 12 km
+Traffic Level     : 3
+Estimated Time    : 27 minutes
